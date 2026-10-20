@@ -1,4 +1,4 @@
-﻿# MyS7Core
+# MyS7Core
 
 同一份源代码同时生成 .NET 8 (`net8.0`) 和 .NET Framework 4.7.2 (`net472`) 的库。
 
@@ -40,4 +40,28 @@ dotnet run --project tests/MyS7Core.CompatibilityTests/MyS7Core.CompatibilityTes
 
 同一组测试在两个目标下运行，覆盖 19 类地址正则、record 元数据、地址/十六进制转换、异步连接与取消、模拟 PLC 异步读写、字符串截断与补齐、原始字节、监控事件与停止。测试不连接真实 PLC。
 
-此次修改只解决多目标兼容性，不改变已有 PLC 业务实现或补充完整的离线模拟功能；实际硬件连接及协议行为仍需联调。
+实际硬件连接及协议行为仍需联调。
+## OffLine 离线模拟
+
+`Offline` 与 `OffLine` 是同一个配置，默认 `false`。也可以使用已有的三参数构造函数 `new PlcFunction(ip, 1, true)`。
+
+```csharp
+using MyS7Core;
+
+using var plc = new PlcFunction("192.168.0.10") { OffLine = true };
+await plc.ConnectAsync(); // 也支持 plc.Connect()
+await plc.WriteAsync("DB1.DBW0", (short)123);
+var value = await plc.ReadAsync("DB1.DBW0");
+
+plc.WriteGroup(new Dictionary<string, object>
+{
+    ["DB1.DBW2"] = (short)456,
+    ["DB1.DBX10.0"] = true
+});
+var values = await plc.ReadGroup(new List<string> { "DB1.DBW2", "DB1.DBX10.0" });
+plc.Disconnect();
+```
+
+离线连接不会访问真实 PLC。模拟器在传输层接入，现有异步读写、原始字节、批量操作、实体操作及 `MonitorAsync` 使用同一套内存。相同 IP 的实例共享内存，不同 IP 隔离；不同 DB 隔离，同一 DB 的重叠地址共享字节。未写入的字节为零，未初始化的日期返回 `DateTime.MinValue`。断开再连接保留数据，进程退出后清空，不做磁盘持久化。修改离线开关或 IP 后需要重新连接。
+
+离线模式沿用现有地址规则、类型转换及限制（例如 LDT 写入仍未实现），不模拟网络故障、PLC 程序执行或真实扫描周期。

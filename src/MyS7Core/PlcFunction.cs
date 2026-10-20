@@ -66,6 +66,9 @@ public class PlcFunction : IDisposable
     public DataType DataType { get; set; } = DataType.DataBlock;
     public CpuType CpuType { get; set; } = CpuType.S71500;
     public bool Offline { get; set; }
+
+    /// <summary>Alias for Offline, compatible with the original OffLine configuration.</summary>
+    public bool OffLine { get => Offline; set => Offline = value; }
     public bool IsConnected { get; set; }
     public int ThreadCount { get; set; } = ConstClass.DefaultThreadCount;
     public int ThreadSleep { get; set; } = ConstClass.DefaultThreadSleep;
@@ -130,7 +133,10 @@ public class PlcFunction : IDisposable
         {
             if (Offline)
             {
-                IsConnected = true;
+                _plc?.Close();
+                _plc = new OfflinePlc(IPAddress);
+                _plc.Open();
+                IsConnected = _plc.IsConnected;
             }
             else
             {
@@ -162,7 +168,10 @@ public class PlcFunction : IDisposable
         {
             if (Offline)
             {
-                IsConnected = true;
+                _plc?.Close();
+                _plc = new OfflinePlc(IPAddress);
+                _plc.Open();
+                IsConnected = _plc.IsConnected;
                 return;
             }
 
