@@ -394,11 +394,11 @@ public class PlcAddress
 
                     IL_07c3:
                         text2 = input.Substring(1);
-                        if (!text2.Contains('.'))
+                        if (text2.IndexOf('.') < 0)
                             throw new InvalidAddressException("To few periods for DB address");
 
-                        address = int.Parse(text2.Substring(0, text2.IndexOf('.', StringComparison.Ordinal)));
-                        bitNumber = int.Parse(text2.Substring(text2.IndexOf('.', StringComparison.Ordinal) + 1));
+                        address = int.Parse(text2.Substring(0, text2.IndexOf('.')));
+                        bitNumber = int.Parse(text2.Substring(text2.IndexOf('.') + 1));
                         if (bitNumber > 7)
                         {
                             throw new InvalidAddressException("Bit can only be 0-7");

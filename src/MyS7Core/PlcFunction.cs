@@ -13,7 +13,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using DateTime = System.DateTime;
 
 namespace MyS7Core;
@@ -418,7 +417,7 @@ public class PlcFunction : IDisposable
         if (string.IsNullOrWhiteSpace(address))
             throw new ArgumentException("The address cannot be null or an empty string", nameof(address));
 
-        if (!address.Contains('.'))
+        if (address.IndexOf('.') < 0)
             throw new ArgumentException("Invalid address format, must include separator '.'", nameof(address));
 
         if (_plc == null)
@@ -435,7 +434,7 @@ public class PlcFunction : IDisposable
             (RegexManager.DbwAddressRegex(), () => _plc.ReadAsync(address)),
             (RegexManager.UdbwAddressRegex(), async () =>
             {
-                int start = int.Parse(strArray[1].AsSpan(SubFour), CultureInfo.InvariantCulture);
+                int start = int.Parse(strArray[1].Substring(SubFour), CultureInfo.InvariantCulture);
                 var v = await _plc.ReadAsync(DataType.DataBlock, readInfo.Block, start, VarType.Word, 1);
                 return (ushort)(v ?? 0);
             }),
@@ -448,7 +447,7 @@ public class PlcFunction : IDisposable
 
               (RegexManager.UsitAddressRegex(), async () =>
             {
-                int start = int.Parse(strArray[1].AsSpan(SubFour), CultureInfo.InvariantCulture);
+                int start = int.Parse(strArray[1].Substring(SubFour), CultureInfo.InvariantCulture);
                 var v = await _plc.ReadAsync(DataType.DataBlock, readInfo.Block, start, VarType.Byte, 1);
                 return (byte)(v ?? 0);
             }),
@@ -461,14 +460,14 @@ public class PlcFunction : IDisposable
 
               (RegexManager.UditAddressRegex(), async () =>
             {
-                int start = int.Parse(strArray[1].AsSpan(SubFour), CultureInfo.InvariantCulture);
+                int start = int.Parse(strArray[1].Substring(SubFour), CultureInfo.InvariantCulture);
                 var v = await _plc.ReadAsync(DataType.DataBlock, readInfo.Block, start, VarType.DWord, 1);
                 return (uint)(v ?? 0);
             }),
 
               (RegexManager.DdwdAddressRegex(), async () =>
             {
-                int start = int.Parse(strArray[1].AsSpan(SubFour), CultureInfo.InvariantCulture);
+                int start = int.Parse(strArray[1].Substring(SubFour), CultureInfo.InvariantCulture);
                 var v = await _plc.ReadAsync(DataType.DataBlock, readInfo.Block, start, VarType.DWord, 1);
                 return FormatHexDWord((uint)(v ?? 0));
             }),
@@ -747,7 +746,8 @@ public class PlcFunction : IDisposable
         if (_plc == null)
             throw new InvalidOperationException("PLC is not connected. Please connect before writing.");
 
-        ArgumentNullException.ThrowIfNull(keyValues);
+        if (keyValues == null)
+            throw new ArgumentNullException(nameof(keyValues));
 
         foreach (IGrouping<DataType, DtDataItem> group in from n in keyValues
                                                         select DtDataItem.FromAddress(n.Key, n.Value) into n
@@ -914,7 +914,7 @@ public class PlcFunction : IDisposable
                     var str = ConvertValue<string>(value, nameof(value));
                     int maxLen = int.Parse(strArray[SubTwo], CultureInfo.InvariantCulture);
                     if (str.Length > maxLen)
-                        str = str[..maxLen];
+                        str = str.Substring(0, maxLen);
                     else
                         str = str.PadRight(maxLen, ' ');
 
@@ -1011,8 +1011,8 @@ public class PlcFunction : IDisposable
         var letterCount = parts[1].Count(char.IsLetter);
         //Block:PLC DB Blocks , Address：Data Address
         return (
-            int.Parse(parts[0].AsSpan(2), CultureInfo.InvariantCulture),
-            int.Parse(parts[1].AsSpan(letterCount), CultureInfo.InvariantCulture)
+            int.Parse(parts[0].Substring(2), CultureInfo.InvariantCulture),
+            int.Parse(parts[1].Substring(letterCount), CultureInfo.InvariantCulture)
         );
     }
 
@@ -1034,7 +1034,7 @@ public class PlcFunction : IDisposable
         };
 
         if (s.Length >= 2 && s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            s = s[2..];
+            s = s.Substring(2);
 
         if (uint.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var result))
             return result;
